@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/containers/buildah"
-	"github.com/containers/buildah/pkg/parse"
 	"github.com/containers/common/pkg/config"
 	is "github.com/containers/image/v5/storage"
 	"github.com/containers/storage"
@@ -39,7 +38,7 @@ func main() {
 	defer buildStore.Shutdown(false)
 
 	builderOpts := buildah.BuilderOptions{
-		FromImage:    "node:12-alpine",
+		FromImage:    "scratch",
 		Capabilities: capabilitiesForRoot,
 	}
 
@@ -49,24 +48,26 @@ func main() {
 	}
 	defer builder.Delete()
 
-	err = builder.Add("/home/node/", false, buildah.AddAndCopyOptions{}, "script.js")
+	err = builder.Add("/", false, buildah.AddAndCopyOptions{}, "checkpoint-counters_default-counter-2023-04-17T12:54:01Z.tar")
 	if err != nil {
 		panic(err)
 	}
 
-	isolation, err := parse.IsolationOption("")
-	if err != nil {
-		panic(err)
-	}
+	// isolation, err := parse.IsolationOption("")
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	err = builder.Run([]string{"sh", "-c", "date > /home/node/build-date.txt"}, buildah.RunOptions{Isolation: isolation, Terminal: buildah.WithoutTerminal})
-	if err != nil {
-		panic(err)
-	}
+	builder.SetAnnotation("io.kubernetes.cri-o.annotations.checkpoint.name", "counter")
 
-	builder.SetCmd([]string{"node", "/home/node/script.js"})
+	// err = builder.Run([]string{"sh", "-c", "date > /home/node/build-date.txt"}, buildah.RunOptions{Isolation: isolation, Terminal: buildah.WithoutTerminal})
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	imageRef, err := is.Transport.ParseStoreReference(buildStore, "docker.io/myusername/my-image")
+	// builder.SetCmd([]string{"node", "/home/node/script.js"})
+
+	imageRef, err := is.Transport.ParseStoreReference(buildStore, "checkpointfromgolang")
 	if err != nil {
 		panic(err)
 	}
