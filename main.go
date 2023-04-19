@@ -48,7 +48,7 @@ func main() {
 	}
 	defer builder.Delete()
 
-	err = builder.Add("/", false, buildah.AddAndCopyOptions{}, "checkpoint-counters_default-counter-2023-04-17T12:54:01Z.tar")
+	err = builder.Add("/", false, buildah.AddAndCopyOptions{}, "/var/lib/kubelet/checkpoints/checkpoint-counters_default-counter-2023-04-17T12:54:01Z.tar")
 	if err != nil {
 		panic(err)
 	}
