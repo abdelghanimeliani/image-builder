@@ -38,7 +38,6 @@ func main() {
 	defer buildStore.Shutdown(false)
 
 	builderOpts := buildah.BuilderOptions{
-		FromImage:    "scratch",
 		Capabilities: capabilitiesForRoot,
 	}
 
@@ -59,6 +58,8 @@ func main() {
 	// }
 
 	builder.SetAnnotation("io.kubernetes.cri-o.annotations.checkpoint.name", "counter")
+
+	fmt.Println("this is container annotations:", builder.Annotations())
 
 	// err = builder.Run([]string{"sh", "-c", "date > /home/node/build-date.txt"}, buildah.RunOptions{Isolation: isolation, Terminal: buildah.WithoutTerminal})
 	// if err != nil {
