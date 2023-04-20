@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"os"
-	"path"
 
 	"github.com/containers/buildah"
 	"github.com/containers/common/pkg/config"
@@ -71,11 +70,9 @@ func main() {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	targetFile := path.Join(tmpDir, "/var/lib/kubelet/checkpoints/checkpoint-counters_default-counter-2023-04-17T11:55:18Z.tar")
-
 	// Copy checkpoint from temporary tar file in the image
 	addAndCopyOptions := buildah.AddAndCopyOptions{}
-	if err := importBuilder.Add("", true, addAndCopyOptions, targetFile); err != nil {
+	if err := importBuilder.Add("", true, addAndCopyOptions, "checkpoint.tar"); err != nil {
 		panic(err)
 	}
 
