@@ -41,7 +41,7 @@ func main() {
 		panic(err)
 	}
 	// Create storage reference
-	imageRef, err := is.Transport.ParseStoreReference(buildStore, "localhost/restore-restore")
+	imageRef, err := is.Transport.ParseStoreReference(buildStore, "localhost/built_from-the_operator")
 	if err != nil {
 
 		panic(errors.New("failed to parse image name"))
