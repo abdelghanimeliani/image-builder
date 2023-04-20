@@ -76,6 +76,7 @@ func main() {
 		panic(err)
 	}
 
+	importBuilder.SetAnnotation("io.kubernetes.cri-o.annotations.checkpoint.name", "counter")
 	commitOptions := buildah.CommitOptions{
 		Squash:        true,
 		SystemContext: &types.SystemContext{},
