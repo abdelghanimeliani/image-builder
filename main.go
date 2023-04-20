@@ -2,13 +2,17 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"errors"
+	"os"
+	"path"
 
 	"github.com/containers/buildah"
 	"github.com/containers/common/pkg/config"
 	is "github.com/containers/image/v5/storage"
+	"github.com/containers/image/v5/types"
 	"github.com/containers/storage"
 	"github.com/containers/storage/pkg/unshare"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -22,6 +26,13 @@ func main() {
 		panic(err)
 	}
 
+	buildStore, err := storage.GetStore(buildStoreOptions)
+	if err != nil {
+		panic(err)
+	}
+	println("this is the buildstore object", buildStore)
+	defer buildStore.Shutdown(false)
+
 	conf, err := config.Default()
 	if err != nil {
 		panic(err)
@@ -30,55 +41,53 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
-	buildStore, err := storage.GetStore(buildStoreOptions)
-	if err != nil {
-		panic(err)
-	}
-	defer buildStore.Shutdown(false)
-
-	builderOpts := buildah.BuilderOptions{
-		Capabilities: capabilitiesForRoot,
-	}
-
-	builder, err := buildah.NewBuilder(context.TODO(), buildStore, builderOpts)
-	if err != nil {
-		panic(err)
-	}
-	defer builder.Delete()
-
-	err = builder.Add("/", false, buildah.AddAndCopyOptions{}, "/var/lib/kubelet/checkpoints/checkpoint-counters_default-counter-2023-04-17T11:55:18Z.tar")
-	if err != nil {
-		panic(err)
-	}
-
-	// isolation, err := parse.IsolationOption("")
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	builder.SetAnnotation("io.kubernetes.cri-o.annotations.checkpoint.name", "counter")
-
-	fmt.Println("this is container annotations:", builder.Annotations())
-
-	// err = builder.Run([]string{"sh", "-c", "date > /home/node/build-date.txt"}, buildah.RunOptions{Isolation: isolation, Terminal: buildah.WithoutTerminal})
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	// builder.SetCmd([]string{"node", "/home/node/script.js"})
-
+	// Create storage reference
 	imageRef, err := is.Transport.ParseStoreReference(buildStore, "localhost/restore-restore")
 	if err != nil {
-		panic(err)
+
+		panic(errors.New("failed to parse image name"))
 	}
 
-	imageId, _, _, err := builder.Commit(context.TODO(), imageRef, buildah.CommitOptions{})
+	// Build an image scratch
+	builderOptions := buildah.BuilderOptions{
+		FromImage:    "scratch",
+		Capabilities: capabilitiesForRoot,
+	}
+	importBuilder, err := buildah.NewBuilder(context.TODO(), buildStore, builderOptions)
 	if err != nil {
 		panic(err)
 	}
+	// Clean up buildah working container
+	defer func() {
+		if err := importBuilder.Delete(); err != nil {
+			logrus.Errorf("Image builder delete failed: %v", err)
+		}
+	}()
 
-	builder.Mount("just a libel")
+	// Export checkpoint into temporary tar file
+	tmpDir, err := os.MkdirTemp("", "checkpoint_image_")
+	if err != nil {
+		panic(err)
+	}
+	defer os.RemoveAll(tmpDir)
 
-	fmt.Printf("Image built! %s\n", imageId)
+	targetFile := path.Join(tmpDir, "/var/lib/kubelet/checkpoints/checkpoint-counters_default-counter-2023-04-17T11:55:18Z.tar")
+
+	// Copy checkpoint from temporary tar file in the image
+	addAndCopyOptions := buildah.AddAndCopyOptions{}
+	if err := importBuilder.Add("", true, addAndCopyOptions, targetFile); err != nil {
+		panic(err)
+	}
+
+	commitOptions := buildah.CommitOptions{
+		Squash:        true,
+		SystemContext: &types.SystemContext{},
+	}
+
+	// Create checkpoint image
+	id, _, _, err := importBuilder.Commit(context.TODO(), imageRef, commitOptions)
+	if err != nil {
+		panic(err)
+	}
+	logrus.Debugf("Created checkpoint image: %s", id)
 }
