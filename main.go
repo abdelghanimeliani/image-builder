@@ -67,7 +67,7 @@ func main() {
 
 	// builder.SetCmd([]string{"node", "/home/node/script.js"})
 
-	imageRef, err := is.Transport.ParseStoreReference(buildStore, "checkpointfromgolang")
+	imageRef, err := is.Transport.ParseStoreReference(buildStore, "localhost/restore-restore")
 	if err != nil {
 		panic(err)
 	}
