@@ -78,5 +78,7 @@ func main() {
 		panic(err)
 	}
 
+	builder.Mount("/")
+
 	fmt.Printf("Image built! %s\n", imageId)
 }
